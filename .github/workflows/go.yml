@@ -31,4 +31,9 @@ jobs:
       uses: actions/upload-artifact@v3.1.0
       with:
         path: ./clean-me
-
+        
+    - name: clean-me-release
+      uses: google-github-actions/release-please-action@v3
+      with:
+        release-type: go
+        package-name: clean-me
