@@ -17,18 +17,18 @@ jobs:
         go-version: 1.18
 
     - name: BuildForWindows
-      run: bash ../build-windows.sh
+      run: ls && bash ./build-windows.sh
 
     - name: BuildForLinux
       run: bash ../build-linux.sh
-      
-    - name: Upload a Build Artifact for windows 
+
+    - name: Upload a Build Artifact for windows
       uses: actions/upload-artifact@v3.1.0
       with:
         path: ../clean-me.exe
-        
-    - name: Upload a Build Artifact for linux 
+
+    - name: Upload a Build Artifact for linux
       uses: actions/upload-artifact@v3.1.0
       with:
         path: ../clean-me
- 
+
