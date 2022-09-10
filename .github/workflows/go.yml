@@ -1,0 +1,34 @@
+name: Go
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+
+    - name: BuildForWindows
+      run: bash ../build-windows.sh
+
+    - name: BuildForLinux
+      run: bash ../build-linux.sh
+      
+    - name: Upload a Build Artifact for windows 
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        path: ../clean-me.exe
+        
+    - name: Upload a Build Artifact for linux 
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        path: ../clean-me
+ 
