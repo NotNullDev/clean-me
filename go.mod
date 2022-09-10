@@ -1,4 +1,4 @@
-module github.com/notnulldev/xd
+module github.com/notnulldev/clean-me
 
 go 1.19
 

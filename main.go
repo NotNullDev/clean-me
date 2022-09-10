@@ -13,8 +13,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-//go:embed config.yaml
-var examleConfig embed.FS
+//go:embed config-sample.yaml
+var exampleConfig embed.FS
 
 type AppFolder struct {
 	Name string `yaml:"name"`
@@ -96,7 +96,7 @@ func parseUserInpit() AppInput {
 			os.Exit(1)
 		}
 
-		exampleConfigFileContent, _ := examleConfig.ReadFile("config.yaml")
+		exampleConfigFileContent, _ := exampleConfig.ReadFile("config-sample.yaml")
 
 		os.WriteFile("config.yaml", exampleConfigFileContent, fs.ModeAppend)
 
