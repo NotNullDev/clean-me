@@ -1,0 +1,16 @@
+# pattern regex flavor: re2: https://github.com/google/re2/wiki/Syntax
+# validator (select flavor golang): https://regex101.com/
+filenames:
+  - pattern: .+\.log
+    minSizeMb: 0
+    olderThanDays: 2
+    delete: false
+  - pattern: omaga
+    minSizeMb: 0
+    olderThanDays: 0
+    delete: true
+folders:
+  - name: "/var/log"
+  - name: "/home"
+  - name: "/root"
+  - name: "."

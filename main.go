@@ -98,7 +98,7 @@ func parseUserInpit() AppInput {
 
 		exampleConfigFileContent, _ := exampleConfig.ReadFile("config-sample.yaml")
 
-		os.WriteFile("config.yaml", exampleConfigFileContent, fs.ModeAppend)
+		os.WriteFile("config.yaml", exampleConfigFileContent, 0666)
 
 		println("File [config.yaml] has been generated")
 		os.Exit(1)
