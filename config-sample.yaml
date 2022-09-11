@@ -4,13 +4,10 @@ filenames:
   - pattern: .+\.log
     minSizeMb: 0
     olderThanDays: 2
-    delete: false
+    action: print
   - pattern: omaga
     minSizeMb: 0
     olderThanDays: 0
-    delete: true
+    action: delete
 folders:
-  - name: "/var/log"
-  - name: "/home"
-  - name: "/root"
   - name: "."

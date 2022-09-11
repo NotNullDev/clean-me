@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"flag"
+	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -20,22 +21,31 @@ type AppFolder struct {
 	Name string `yaml:"name"`
 }
 
+// TODO: update yaml
 type AppFile struct {
 	Pattern       string `yaml:"pattern"`
 	MinSizeInMb   int    `yaml:"minSizeMb"`
-	Delete        bool   `yaml:"delete"`
+	Action        string `yaml:"action"`
+	ActionTo      string `yaml:"actionTo"`
+	PreservePath  bool   `yaml:"preservePath"`
 	OlderThanDays int    `yaml:"olderThanDays"`
 }
 
 type AppInput struct {
-	Filenames []AppFile   `yaml:"filenames"`
-	Folders   []AppFolder `yaml:"folders"`
+	Filenames          []AppFile   `yaml:"filenames"`
+	Folders            []AppFolder `yaml:"folders"`
+	PromptBeforeAction bool        `yaml:"promptBeforeActions"` // kind of -WhatIf from ps1
+}
+
+type InternalAppFile struct {
+	file AppFile
+	path string
 }
 
 func main() {
-	appInput := parseUserInpit()
+	appInput := parseUserInput()
 
-	filesToDelete := []string{}
+	filesToProcess := []InternalAppFile{}
 
 	for idxFolder, folder := range appInput.Folders {
 		log.Printf("Searching folder %d: [%s]", idxFolder+1, folder.Name)
@@ -47,10 +57,10 @@ func main() {
 
 		for _, filenameInfo := range appInput.Filenames {
 			log.Printf("Compiling regex: [%s]", filenameInfo.Pattern)
-			newRegexpt, err := regexp.Compile(filenameInfo.Pattern)
+			newRegexp, err := regexp.Compile(filenameInfo.Pattern)
 
 			if err != nil {
-				log.Panicf("ERRROR: [%s]\n", err.Error())
+				log.Panicf("ERROR: [%s]\n", err.Error())
 			}
 
 			filepath.WalkDir(folder.Name, func(path string, d fs.DirEntry, err error) error {
@@ -61,20 +71,40 @@ func main() {
 				info, err := d.Info()
 
 				if err != nil {
-					log.Printf("Error: coult not read info of the file [%s], error: [%s]", path, err.Error())
+					log.Printf("Error: could not read info of the file [%s], error: [%s]", path, err.Error())
 				}
 
 				matched := !d.IsDir() &&
-					newRegexpt.MatchString(d.Name()) &&
+					newRegexp.MatchString(d.Name()) &&
 					info.ModTime().Before(time.Now().AddDate(0, 0, -filenameInfo.OlderThanDays)) &&
 					(info.Size()/1000) >= int64(filenameInfo.MinSizeInMb)
 
 				if matched {
-					if filenameInfo.Delete {
-						log.Printf("File [%s] marked to be deleted.", path)
-						filesToDelete = append(filesToDelete, path)
-					} else {
-						log.Printf("Found file [%s]", path)
+					switch filenameInfo.Action {
+					case "delete":
+						log.Printf("File [%s] marked to be deleted.\n", path)
+						filesToProcess = append(filesToProcess, InternalAppFile{
+							file: filenameInfo,
+							path: path,
+						})
+					case "print":
+						log.Printf("Found file [%s]\n", path)
+					case "move":
+						log.Printf("File [%s] marked to be moved.\n", path)
+						filesToProcess = append(filesToProcess, InternalAppFile{
+							file: filenameInfo,
+							path: path,
+						})
+					case "copy":
+						log.Printf("File [%s] marked to be copied.\n", path)
+						filesToProcess = append(filesToProcess, InternalAppFile{
+							file: filenameInfo,
+							path: path,
+						})
+					case "none":
+
+					default:
+						log.Printf("ERROR: action not supported: [%s]", filenameInfo.Action)
 					}
 				}
 
@@ -82,10 +112,73 @@ func main() {
 			})
 		}
 	}
-	log.Printf("Files to delete: [%d]", len(filesToDelete))
+
+	processResult(filesToProcess)
 }
 
-func parseUserInpit() AppInput {
+func processResult(filesToProcess []InternalAppFile) {
+	// todo: list everything and? [prompt user (to be )]
+
+	for _, internalFile := range filesToProcess {
+		switch internalFile.file.Action {
+		case "delete":
+			err := deleteFile(internalFile)
+
+			if err != nil {
+				log.Printf("ERROR: [delete] [%s]", err.Error())
+			}
+		case "copy":
+			err := copyFile(internalFile)
+
+			if err != nil {
+				log.Printf("ERROR: [copy] [%s]", err.Error())
+			}
+
+		case "move":
+			err := moveFile(internalFile)
+
+			if err != nil {
+				log.Printf("ERROR: [move] [%s]", err.Error())
+			}
+		}
+	}
+}
+
+func deleteFile(fileToDelete InternalAppFile) (err error) {
+	err = os.Remove(fileToDelete.path)
+	if err != nil {
+		err = fmt.Errorf("can't delete file [%s], info: [%s]", fileToDelete.path, err.Error())
+	}
+	return err
+}
+
+func copyFile(fileToCopy InternalAppFile) (err error) {
+	fContent, err := os.ReadFile(fileToCopy.path)
+
+	if err != nil {
+		err = fmt.Errorf("can't read file [%s], info: [%s]", fileToCopy.path, err.Error())
+		return
+	}
+
+	err = os.WriteFile(fileToCopy.file.ActionTo, fContent, 0777)
+
+	if err != nil {
+		err = fmt.Errorf("can't copy file [%s], info: [%s]", fileToCopy.path, err.Error())
+		return
+	}
+	return nil
+}
+
+func moveFile(fileToMove InternalAppFile) (err error) {
+	err = copyFile(fileToMove)
+	if err != nil {
+		return
+	}
+	err = deleteFile(fileToMove)
+	return err
+}
+
+func parseUserInput() AppInput {
 	configFileName := flag.String("config", "", "Path to the configuration file. ")
 	gen := flag.Bool("gen", false, "If set to true, new example config file called [config.xml] will be generated in the current directory.")
 	flag.Parse()
